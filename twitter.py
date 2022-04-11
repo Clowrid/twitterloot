@@ -3,19 +3,31 @@ import time
 import tweepy
 import re
 from dotenv import load_dotenv
+from datetime import datetime
+from influxdb_client import InfluxDBClient
+from influxdb_client.client.write_api import SYNCHRONOUS
+import requests
+requests.packages.urllib3.disable_warnings() 
 
-################# Building a list with already liked/RTed tweets #################
 load_dotenv()
-filepath = os.getenv('FILE_PATH')
+########### Using InfluxDB to store processed tweets ##################
+
 listTweetID = []
-try:
-    with open(filepath) as fp:
-        for cnt, line in enumerate(fp):
-            listTweetID.append(int(line))
-    fp.close()
-except FileNotFoundError:
-    f = open("listTweetID.txt", "w")
-f = open(filepath, "a+")
+token = os.getenv("INFLUX_TOKEN")
+org = os.getenv("INFLUX_ORG")
+bucket = os.getenv("INFLUX_BUCKET")
+
+client = InfluxDBClient(url=os.getenv("INFLUX_URL"), token=token, org=org,verify_ssl=False)
+write_api = client.write_api(write_options=SYNCHRONOUS)
+
+query = """from(bucket: "clowrid's bucket")
+  |> range(start: -30d)
+  |> filter(fn: (r) => r["_measurement"] == "tweet")
+  |> filter(fn: (r) => r["_field"] == "id")"""
+tables = client.query_api().query(query, org=org)
+for table in tables:
+    for record in table.records:
+        listTweetID.append(str(int(record.get_value())))
 
 ################# Using tweeter API #################
 auth = tweepy.OAuthHandler(os.getenv('CONSUMER_KEY'), os.getenv('CONSUMER_SECRET'))
@@ -48,7 +60,10 @@ for searchword in searchwordlist:
             continue
 
         else:
-            f.write(str(int(tweet.id_str)) + "\n")
+            tweetId = str(int(tweet.id_str))
+            listTweetID.append(tweetId)
+            data = "tweet,host=tweeter id="+tweetId
+            write_api.write(bucket, org, data)
             matches = re.findall(regex, tweet.full_text)
             newtweetcounter += 1
             for match in matches:
@@ -81,7 +96,8 @@ for searchword in searchwordlist:
                 pass
             time.sleep(5)
 
-    print('[',searchword,']','Subscribed to',newtweetcounter,'new contests.',oldtweetcounter,'were ignored (already subscribed)',ignorecounter,'were ignored (reply or RT)')
+    if int(os.getenv('DEBUG')) == 1:
+        print('[',searchword,']','Subscribed to',newtweetcounter,'new contests.',oldtweetcounter,'were ignored (already subscribed)',ignorecounter,'were ignored (reply or RT)')
 
 ################# RT alternatives topics to hide competition RT #################
 itemlist =  os.getenv('ALTERNATIVE_TOPICS').split(",")
@@ -91,7 +107,10 @@ for item in itemlist:
                            tweet_mode='extended').items(int(os.getenv('ALTERNATIVE_ITEM_NUMBER'))):
         if int(tweet.id_str) in listTweetID:
             continue
-        f.write(str(int(tweet.id_str)) + "\n")
+        tweetId = str(int(tweet.id_str))
+        listTweetID.append(tweetId)
+        data = "tweet,host=tweeter id="+tweetId
+        write_api.write(bucket, org, data)
         try:
             tweet.retweet()
         except Exception as e:
@@ -99,5 +118,4 @@ for item in itemlist:
             pass
         time.sleep(5)
 
-
-f.close()
+client.close()
