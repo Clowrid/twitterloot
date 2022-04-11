@@ -48,7 +48,7 @@ for searchword in searchwordlist:
         if tweet.user.screen_name in ignoreList:
             continue
 
-        if int(tweet.id_str) in listTweetID:
+        if str(int(tweet.id_str)) in listTweetID:
             if int(os.getenv('DEBUG')) == 1:
                 print("tweet already processed : ",int(tweet.id_str))
             oldtweetcounter += 1
@@ -61,8 +61,9 @@ for searchword in searchwordlist:
 
         else:
             tweetId = str(int(tweet.id_str))
+            print("tweet en cours: ",tweetId)
             listTweetID.append(tweetId)
-            data = "tweet,host=tweeter id="+tweetId
+            data = 'tweet,host=tweeter id="'+tweetId+'"'
             write_api.write(bucket, org, data)
             matches = re.findall(regex, tweet.full_text)
             newtweetcounter += 1
@@ -105,11 +106,11 @@ for item in itemlist:
     for tweet in tweepy.Cursor(api.search, q=item,
                            lang="fr", result_type='popular', count=int(os.getenv('ALTERNATIVE_ITEM_NUMBER')),
                            tweet_mode='extended').items(int(os.getenv('ALTERNATIVE_ITEM_NUMBER'))):
-        if int(tweet.id_str) in listTweetID:
+        if str(int(tweet.id_str)) in listTweetID:
             continue
         tweetId = str(int(tweet.id_str))
         listTweetID.append(tweetId)
-        data = "tweet,host=tweeter id="+tweetId
+        data = 'tweet,host=tweeter id="'+tweetId+'"'
         write_api.write(bucket, org, data)
         try:
             tweet.retweet()
