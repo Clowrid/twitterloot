@@ -95,7 +95,7 @@ for searchword in searchwordlist:
             except Exception as e:
                 print(e)
                 pass
-            time.sleep(5)
+            time.sleep(os.getenv('WAITING_TIME_BETWEEN_TWITTER_REQUESTS'))
 
     if int(os.getenv('DEBUG')) == 1:
         print('[',searchword,']','Subscribed to',newtweetcounter,'new contests.',oldtweetcounter,'were ignored (already subscribed)',ignorecounter,'were ignored (reply or RT)')
