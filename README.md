@@ -17,6 +17,12 @@ Installation
  pip install -r requirements.txt 
 ```
 
+AWS - Extract lib for layer
+-----
+```twitterloot % pip install -r requirements.txt -t python```
+
+
+
 
 
 
