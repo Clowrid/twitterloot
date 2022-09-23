@@ -17,6 +17,10 @@ Installation
  pip install -r requirements.txt 
 ```
 
+Troubleshooting for launchd
+-----
+Remove log files 
+Install requirements on the correct python sub-version (pip3.9 for example)
 
 
 
